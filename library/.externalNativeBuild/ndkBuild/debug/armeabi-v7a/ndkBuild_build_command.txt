@@ -1,0 +1,17 @@
+Executable : O:\android-ndk-r15c\ndk-build.cmd
+arguments : 
+NDK_PROJECT_PATH=null
+APP_BUILD_SCRIPT=O:\Projects\FacebookStreaming-master\library\src\main\cpp\Android.mk
+NDK_APPLICATION_MK=O:\Projects\FacebookStreaming-master\library\src\main\cpp\Application.mk
+APP_ABI=armeabi-v7a
+NDK_ALL_ABIS=armeabi-v7a
+NDK_DEBUG=1
+APP_PLATFORM=android-21
+NDK_OUT=O:/Projects/FacebookStreaming-master/library/build/intermediates/ndkBuild/debug/obj
+NDK_LIBS_OUT=O:\Projects\FacebookStreaming-master\library\build\intermediates\ndkBuild\debug\lib
+APP_SHORT_COMMANDS=false
+LOCAL_SHORT_COMMANDS=false
+-B
+-n
+jvmArgs : 
+
