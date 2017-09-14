@@ -9,6 +9,7 @@ import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
+import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
@@ -58,14 +59,16 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
 
     private SharedPreferences sp;
     //    private String rtmpUrl = "rtmp://ossrs.net/" + getRandomAlphaString(3) + '/' + getRandomAlphaDigitString(5);
-    private String rtmpUrl = "rtmp://live-api-a.facebook.com:80/rtmp/1624486124238894?ds=1&s_l=1&a=ATj837ZoVzzWTq5P";
+    private String rtmpUrl = "rtmp://live-api-a.facebook.com:80/rtmp/1624550540899119?ds=1&s_l=1&a=ATh_gei4AYeP4MwB";
     private String recPath = Environment.getExternalStorageDirectory().getPath() + "/test.mp4";
 
     private SrsPublisher mPublisher;
 
     private Surface mSurface;
 
-    SurfaceView mSurfaceView;
+    private SurfaceView mSurfaceView;
+
+    private SurfaceTexture surfaceTexture;
 
     private int mScreenDensity;
 
@@ -271,16 +274,20 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
                         int pixelStride = planes[0].getPixelStride();
                         int rowStride = planes[0].getRowStride();
 
+
                         int capacity = mWidth * pixelStride * mHeight;
-                        byte[] data = new byte[mWidth * pixelStride];
+                        byte[][] data = new byte[mHeight][mWidth * pixelStride];
+                        int rowPadding = rowStride - pixelStride * mWidth;
                         ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
-                        for (int i = mHeight-1; i >=0; i--) {
-                            buffer.get(data, 0, mWidth * pixelStride);
-                            buffer.position((mHeight-i) * rowStride);
-                            bufferDes.put(data);
+                        for (int i = 0; i < mHeight; i++) {
+                            buffer.position((i) * rowStride);
+                            buffer.get(data[i], 0, mWidth * pixelStride);
+                        }
+                        for (int j=0;j<mHeight;j++){
+                            bufferDes.put(data[mHeight-j-1]);
                         }
 
-                       /*int rowPadding = rowStride - pixelStride * mWidth;
+/*                       int rowPadding = rowStride - pixelStride * mWidth;
                         byte[] newData = new byte[mWidth * mHeight * 4];
                         int capacity = mWidth  * mHeight*4;
                         ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
@@ -296,8 +303,8 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
                             offset += rowPadding;
                         }*/
 
-                        mPublisher.onGetRgbaFrame(buffer.array(), mWidth, mHeight);
-//                        bufferDes.rewind();
+                        mPublisher.onGetRgbaFrame(bufferDes.array(), mWidth, mHeight);
+                        bufferDes.rewind();
 
                         //Log.v(TAG, "Sent a single image!");
                     }
