@@ -45,6 +45,7 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
     private float[] mTransformMatrix = new float[16];
 
     private ByteBuffer mGLPreviewBuffer;
+
     private int mPreviewRotation = 90;
     private int mPreviewOrientation = Configuration.ORIENTATION_PORTRAIT;
 
@@ -69,6 +70,11 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         GLES20.glDisable(GL10.GL_DITHER);
         GLES20.glClearColor(0, 0, 0, 0);
+
+        magicFilter = new GPUImageFilter(MagicFilterType.NONE);
+        magicFilter.init(getContext().getApplicationContext());
+        magicFilter.onInputSizeChanged(mPreviewWidth, mPreviewHeight);
+
         mOESTextureId = OpenGLUtils.getExternalOESTextureID();
         surfaceTexture = new SurfaceTexture(mOESTextureId);
         surfaceTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
@@ -84,6 +90,7 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
         GLES20.glViewport(0, 0, width, height);
         mSurfaceWidth = width;
         mSurfaceHeight = height;
+
         mOutputAspectRatio = width > height ? (float) width / height : (float) height / width;
         float aspectRatio = mOutputAspectRatio / mInputAspectRatio;
         if (width > height) {
@@ -97,7 +104,9 @@ public class SrsCameraView extends GLSurfaceView implements GLSurfaceView.Render
     public void onDrawFrame(GL10 gl) {
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+
         surfaceTexture.updateTexImage();
+
         surfaceTexture.getTransformMatrix(mSurfaceMatrix);
         Matrix.multiplyMM(mTransformMatrix, 0, mSurfaceMatrix, 0, mProjectionMatrix, 0);
         magicFilter.setTextureTransformMatrix(mTransformMatrix);

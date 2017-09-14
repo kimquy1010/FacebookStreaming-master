@@ -50,6 +50,7 @@ public class SrsPublisher {
         calcSamplingFps();
         if (!sendAudioOnly) {
             mEncoder.onGetRgbaFrame(data, width, height);
+//            mEncoder.onGetArgbFrame(data, width, height);
         }
     }
 

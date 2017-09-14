@@ -7,6 +7,8 @@ import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.ImageFormat;
 import android.graphics.PixelFormat;
 import android.graphics.Point;
 import android.graphics.SurfaceTexture;
@@ -31,10 +33,12 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.github.faucamp.simplertmp.RtmpHandler;
 import com.seu.magicfilter.utils.MagicFilterType;
+import com.seu.magicfilter.utils.OpenGLUtils;
 
 import net.ossrs.yasea.SrsCameraView2;
 import net.ossrs.yasea.SrsEncodeHandler;
@@ -45,6 +49,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.SocketException;
 import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpListener,
@@ -59,7 +64,7 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
 
     private SharedPreferences sp;
     //    private String rtmpUrl = "rtmp://ossrs.net/" + getRandomAlphaString(3) + '/' + getRandomAlphaDigitString(5);
-    private String rtmpUrl = "rtmp://live-api-a.facebook.com:80/rtmp/1624550540899119?ds=1&s_l=1&a=ATh_gei4AYeP4MwB";
+    private String rtmpUrl = "rtmp://live-api-a.facebook.com:80/rtmp/1624699337550906?ds=1&s_l=1&a=AThX3C0cbFBSkGUn";
     private String recPath = Environment.getExternalStorageDirectory().getPath() + "/test.mp4";
 
     private SrsPublisher mPublisher;
@@ -68,9 +73,12 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
 
     private SurfaceView mSurfaceView;
 
-    private SurfaceTexture surfaceTexture;
+    private SurfaceTexture mSurfaceTexture;
+    private int mOESTextureId = OpenGLUtils.NO_TEXTURE;
+    private ImageView mImageView;
 
     private int mScreenDensity;
+    private DisplayMetrics metrics;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,6 +108,7 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         btnSwitchCamera = (Button) findViewById(R.id.swCam);
         btnRecord = (Button) findViewById(R.id.record);
         btnSwitchEncoder = (Button) findViewById(R.id.swEnc);
+        mImageView=(ImageView) findViewById(R.id.imageView2);
 
         mSurfaceView = (SurfaceView) findViewById(R.id.glsurfaceview_camera);
 
@@ -111,7 +120,6 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         mPublisher.setOutputResolution(360, 640);
         mPublisher.setVideoHDMode();
 //        mPublisher.startCamera();
-
         mSurface = mSurfaceView.getHolder().getSurface();
 
         btnPublish.setOnClickListener(new View.OnClickListener() {
@@ -249,62 +257,89 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         display.getSize(size);
         mWidth = mSurfaceView.getWidth();
         mHeight = mSurfaceView.getHeight();
-        mImageReader = ImageReader.newInstance(mWidth, mHeight, PixelFormat.RGBA_8888, 4);
+        mImageReader = ImageReader.newInstance(mWidth, mHeight, PixelFormat.RGBA_8888, 8);
 
         mVirtualDisplay = mMediaProjection.createVirtualDisplay("ScreenCapture",
                 mSurfaceView.getWidth(), mSurfaceView.getHeight(), mScreenDensity,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 mImageReader.getSurface(), null, null);
+
+/*        mSurfaceTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
+            @Override
+            public void onFrameAvailable(SurfaceTexture surfaceTexture) {
+
+            }
+        }, null);*/
+
         mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener(){
             @Override
             public void onImageAvailable(ImageReader imageReader) {
                 Image image = null;
-                Bitmap bitmap = null;
+                Bitmap bitmap=null;
+//                Bitmap bitmap = Bitmap.createBitmap(metrics,mWidth, mHeight, Bitmap.Config.ARGB_8888);
                 // Replace Byte array to use normal array cause no resizing will occur
                 ByteArrayOutputStream jpegByteOutStream = new ByteArrayOutputStream();
                 //FileOutputStream fos = null; // testing
                 try {
-                    // Grab the image that the reader prepared us with
                     image = mImageReader.acquireLatestImage();
+                    // Grab the image that the reader prepared us with
                     if (image != null) {
-
+//                        int format=image.getFormat();
+//                        Log.d(TAG,"format_image: "+format);
                         Image.Plane[] planes = image.getPlanes();
                         ByteBuffer buffer = planes[0].getBuffer();
                         buffer.rewind();
                         int pixelStride = planes[0].getPixelStride();
                         int rowStride = planes[0].getRowStride();
+                        int rowPadding = rowStride - pixelStride * mWidth;
 
+                        bitmap = Bitmap.createBitmap(mWidth + rowPadding / pixelStride,
+                                mHeight, Bitmap.Config.ARGB_8888);
+                        bitmap.copyPixelsFromBuffer(buffer);
+                        mImageView.setImageBitmap(bitmap);
+
+
+/*                        byte[] bytes=new byte[buffer.capacity()];
+//                        Log.d(TAG,"Capacity: "+buffer.capacity());
+                        buffer.get(bytes);
+                        BitmapFactory.Options opt = new BitmapFactory.Options();
+                        opt.inPreferredConfig = Bitmap.Config.ARGB_8888;
+                        opt.inJustDecodeBounds = true;
+                        bitmap=BitmapFactory.decodeByteArray(bytes,0,bytes.length);*/
 
                         int capacity = mWidth * pixelStride * mHeight;
                         byte[][] data = new byte[mHeight][mWidth * pixelStride];
-                        int rowPadding = rowStride - pixelStride * mWidth;
                         ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
                         for (int i = 0; i < mHeight; i++) {
-                            buffer.position((i) * rowStride);
+                            buffer.position(i * rowStride);
                             buffer.get(data[i], 0, mWidth * pixelStride);
                         }
                         for (int j=0;j<mHeight;j++){
                             bufferDes.put(data[mHeight-j-1]);
                         }
 
-/*                       int rowPadding = rowStride - pixelStride * mWidth;
+                        /*int rowPadding = rowStride - pixelStride * mWidth;
                         byte[] newData = new byte[mWidth * mHeight * 4];
-                        int capacity = mWidth  * mHeight*4;
+                        int capacity = mWidth  * mHeight * pixelStride;
                         ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
-                        int offset = 0;
-                        for (int i = mHeight-1; i >=0; i--) {
-                            for (int j = mWidth-1; j >=0 ; j--) {
-                                byte pixel = 0;
-                                pixel |= (buffer.get(offset) & 0xff);
-                                bufferDes.position((mHeight-i-1)*mWidth+(mWidth-j-1));
-                                bufferDes.put(pixel);
-                                offset += pixelStride;
+                        byte[] data=new byte[pixelStride];
+                        for (int i = 0; i <mHeight; i++) {
+                            buffer.position(i*rowStride);
+                            for (int j = 0; j <mWidth ; j++) {
+                                buffer.position(j*pixelStride);
+                                buffer.get(data,0,pixelStride);
+                                byte a=data[0];
+                                data[0]=data[3];
+                                data[3]=a;
+                                bufferDes.put(data);
                             }
-                            offset += rowPadding;
                         }*/
-
-                        mPublisher.onGetRgbaFrame(bufferDes.array(), mWidth, mHeight);
                         bufferDes.rewind();
+/*                        IntBuffer bufferInt =bufferDes.asIntBuffer();
+                        int[] arr=new int[bufferInt.remaining()];
+                        bufferInt.get(arr);*/
+                        mPublisher.onGetRgbaFrame(bufferDes.array(), mWidth, mHeight);
+//                        bitmap=BitmapFactory.decodeByteArray(bufferDes.array(),0,bufferDes.array().length);
 
                         //Log.v(TAG, "Sent a single image!");
                     }
@@ -329,7 +364,6 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
                 }
             }
         }, null);
-
 
     }
 
