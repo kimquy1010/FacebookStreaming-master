@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
     private Button btnSwitchEncoder;
 
     private SharedPreferences sp;
-    private String rtmpUrl = "rtmp://live-api-a.facebook.com:80/rtmp/1625387180815455?ds=1&s_l=1&a=ATjtf4L0DoRM2uSV";
+    private String rtmpUrl = "rtmp://live-api-a.facebook.com:80/rtmp/1625437000810473?ds=1&s_l=1&a=ATiQP13Clag5uDgs";
     private String recPath = Environment.getExternalStorageDirectory().getPath() + "/test.mp4";
 
     private SrsPublisher mPublisher;
@@ -275,10 +275,12 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
                     // Grab the image that the reader prepared us with
                     if (image != null) {
 //                        bitmap =getScreenshot(image);
-                        ByteBuffer bufferDes=getBufferFromImage(image);
+//                        byte[] arr=getBufferFromImage_Rgba(image);
+//                        mPublisher.onGetRgbaFrame(arr, mWidth, mHeight);
 
-                        bufferDes.rewind();
-                        mPublisher.onGetRgbaFrame(bufferDes.array(), mWidth, mHeight);
+                        int[] arr= getArrayFromImage_Argb(image);
+                        mPublisher.onGetArgbFrame(arr,mWidth,mHeight);
+
                         //Log.v(TAG, "Sent a single image!");
                     }
                 } catch (Exception e) {
@@ -327,7 +329,7 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         return bufferDes;
     }
 
-    private ByteBuffer getBufferFromImage(Image image){
+    private byte[] getBufferFromImage_Rgba(Image image){
         Image.Plane[] planes = image.getPlanes();
         ByteBuffer buffer = planes[0].getBuffer();
         buffer.rewind();
@@ -344,7 +346,31 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         for (int j=0;j<mHeight;j++){
             bufferDes.put(data[mHeight-j-1]);
         }
-        return bufferDes;
+        return bufferDes.array();
+    }
+    private int[] getArrayFromImage_Argb(Image image){
+        Image.Plane[] planes = image.getPlanes();
+        ByteBuffer buffer = planes[0].getBuffer();
+        buffer.rewind();
+        int pixelStride = planes[0].getPixelStride();
+        int rowStride = planes[0].getRowStride();
+        int rowPadding = rowStride - pixelStride * mWidth;
+        int capacity = mWidth * pixelStride * mHeight;
+        byte[] data = new byte[mWidth * pixelStride];
+        ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
+        for (int i = 0; i < mHeight; i++) {
+            buffer.position(i * rowStride);
+            buffer.get(data, 0, mWidth * pixelStride);
+            bufferDes.put(data);
+        }
+//        for (int j=0;j<mHeight;j++){
+//            bufferDes.put(data[mHeight-j-1]);
+//        }
+        bufferDes.rewind();
+        IntBuffer bufferInt =bufferDes.asIntBuffer();
+        int[] arr=new int[bufferInt.remaining()];
+        bufferInt.get(arr);
+        return arr;
     }
 
     private ByteBuffer getBufferFromImage_2(Image image){
@@ -370,14 +396,6 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         }
         return  bufferDes;
     }
-
-    private IntBuffer convertToIntBuffer(ByteBuffer bufferDes){
-        IntBuffer bufferInt =bufferDes.asIntBuffer();
-        int[] arr=new int[bufferInt.remaining()];
-        bufferInt.get(arr);
-        return bufferInt;
-    }
-
 
     private void setUpMediaProjection() {
         mMediaProjection = mMediaProjectionManager.getMediaProjection(mResultCode, mResultData);
