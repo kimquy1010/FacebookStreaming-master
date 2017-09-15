@@ -63,8 +63,7 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
     private Button btnSwitchEncoder;
 
     private SharedPreferences sp;
-    //    private String rtmpUrl = "rtmp://ossrs.net/" + getRandomAlphaString(3) + '/' + getRandomAlphaDigitString(5);
-    private String rtmpUrl = "rtmp://live-api-a.facebook.com:80/rtmp/1624699337550906?ds=1&s_l=1&a=AThX3C0cbFBSkGUn";
+    private String rtmpUrl = "rtmp://live-api-a.facebook.com:80/rtmp/1625387180815455?ds=1&s_l=1&a=ATjtf4L0DoRM2uSV";
     private String recPath = Environment.getExternalStorageDirectory().getPath() + "/test.mp4";
 
     private SrsPublisher mPublisher;
@@ -264,83 +263,22 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 mImageReader.getSurface(), null, null);
 
-/*        mSurfaceTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
-            @Override
-            public void onFrameAvailable(SurfaceTexture surfaceTexture) {
-
-            }
-        }, null);*/
-
         mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener(){
             @Override
             public void onImageAvailable(ImageReader imageReader) {
                 Image image = null;
                 Bitmap bitmap=null;
-//                Bitmap bitmap = Bitmap.createBitmap(metrics,mWidth, mHeight, Bitmap.Config.ARGB_8888);
-                // Replace Byte array to use normal array cause no resizing will occur
+
                 ByteArrayOutputStream jpegByteOutStream = new ByteArrayOutputStream();
-                //FileOutputStream fos = null; // testing
                 try {
                     image = mImageReader.acquireLatestImage();
                     // Grab the image that the reader prepared us with
                     if (image != null) {
-//                        int format=image.getFormat();
-//                        Log.d(TAG,"format_image: "+format);
-                        Image.Plane[] planes = image.getPlanes();
-                        ByteBuffer buffer = planes[0].getBuffer();
-                        buffer.rewind();
-                        int pixelStride = planes[0].getPixelStride();
-                        int rowStride = planes[0].getRowStride();
-                        int rowPadding = rowStride - pixelStride * mWidth;
+//                        bitmap =getScreenshot(image);
+                        ByteBuffer bufferDes=getBufferFromImage(image);
 
-                        bitmap = Bitmap.createBitmap(mWidth + rowPadding / pixelStride,
-                                mHeight, Bitmap.Config.ARGB_8888);
-                        bitmap.copyPixelsFromBuffer(buffer);
-                        mImageView.setImageBitmap(bitmap);
-
-
-/*                        byte[] bytes=new byte[buffer.capacity()];
-//                        Log.d(TAG,"Capacity: "+buffer.capacity());
-                        buffer.get(bytes);
-                        BitmapFactory.Options opt = new BitmapFactory.Options();
-                        opt.inPreferredConfig = Bitmap.Config.ARGB_8888;
-                        opt.inJustDecodeBounds = true;
-                        bitmap=BitmapFactory.decodeByteArray(bytes,0,bytes.length);*/
-
-                        int capacity = mWidth * pixelStride * mHeight;
-                        byte[][] data = new byte[mHeight][mWidth * pixelStride];
-                        ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
-                        for (int i = 0; i < mHeight; i++) {
-                            buffer.position(i * rowStride);
-                            buffer.get(data[i], 0, mWidth * pixelStride);
-                        }
-                        for (int j=0;j<mHeight;j++){
-                            bufferDes.put(data[mHeight-j-1]);
-                        }
-
-                        /*int rowPadding = rowStride - pixelStride * mWidth;
-                        byte[] newData = new byte[mWidth * mHeight * 4];
-                        int capacity = mWidth  * mHeight * pixelStride;
-                        ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
-                        byte[] data=new byte[pixelStride];
-                        for (int i = 0; i <mHeight; i++) {
-                            buffer.position(i*rowStride);
-                            for (int j = 0; j <mWidth ; j++) {
-                                buffer.position(j*pixelStride);
-                                buffer.get(data,0,pixelStride);
-                                byte a=data[0];
-                                data[0]=data[3];
-                                data[3]=a;
-                                bufferDes.put(data);
-                            }
-                        }*/
                         bufferDes.rewind();
-/*                        IntBuffer bufferInt =bufferDes.asIntBuffer();
-                        int[] arr=new int[bufferInt.remaining()];
-                        bufferInt.get(arr);*/
                         mPublisher.onGetRgbaFrame(bufferDes.array(), mWidth, mHeight);
-//                        bitmap=BitmapFactory.decodeByteArray(bufferDes.array(),0,bufferDes.array().length);
-
                         //Log.v(TAG, "Sent a single image!");
                     }
                 } catch (Exception e) {
@@ -366,6 +304,80 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         }, null);
 
     }
+
+    private Bitmap getScreenshot(Image image) {
+        Image.Plane[] planes = image.getPlanes();
+        ByteBuffer buffer = planes[0].getBuffer();
+        int pixelStride = planes[0].getPixelStride();
+        int rowStride = planes[0].getRowStride();
+        int rowPadding = rowStride - pixelStride * mWidth;
+
+        Bitmap bitmap = Bitmap.createBitmap(mWidth + rowPadding / pixelStride, mHeight, Bitmap.Config.ARGB_8888);
+        bitmap.copyPixelsFromBuffer(buffer);
+        image.close();
+
+        return bitmap;
+    }
+
+    private ByteBuffer getBufferFromBitmap(Bitmap bitmap){
+        int bytes=bitmap.getByteCount();
+        ByteBuffer bufferDes = ByteBuffer.allocate(bytes); //Create a new buffer
+        bitmap.copyPixelsToBuffer(bufferDes); //Move the byte data to the buffer
+        byte[] array = bufferDes.array(); //Get the underlying array containing the data.
+        return bufferDes;
+    }
+
+    private ByteBuffer getBufferFromImage(Image image){
+        Image.Plane[] planes = image.getPlanes();
+        ByteBuffer buffer = planes[0].getBuffer();
+        buffer.rewind();
+        int pixelStride = planes[0].getPixelStride();
+        int rowStride = planes[0].getRowStride();
+        int rowPadding = rowStride - pixelStride * mWidth;
+        int capacity = mWidth * pixelStride * mHeight;
+        byte[][] data = new byte[mHeight][mWidth * pixelStride];
+        ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
+        for (int i = 0; i < mHeight; i++) {
+            buffer.position(i * rowStride);
+            buffer.get(data[i], 0, mWidth * pixelStride);
+        }
+        for (int j=0;j<mHeight;j++){
+            bufferDes.put(data[mHeight-j-1]);
+        }
+        return bufferDes;
+    }
+
+    private ByteBuffer getBufferFromImage_2(Image image){
+        Image.Plane[] planes = image.getPlanes();
+        ByteBuffer buffer = planes[0].getBuffer();
+
+        int pixelStride = planes[0].getPixelStride();
+        int rowStride = planes[0].getRowStride();
+        int rowPadding = rowStride - pixelStride * mWidth;
+        int capacity = mWidth  * mHeight * pixelStride;
+        ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
+        byte[] data=new byte[pixelStride];
+        for (int i = 0; i <mHeight; i++) {
+            buffer.position(i * rowStride);
+            for (int j = 0; j < mWidth; j++) {
+                buffer.position(j * pixelStride);
+                buffer.get(data, 0, pixelStride);
+                byte a = data[0];
+                data[0] = data[3];
+                data[3] = a;
+                bufferDes.put(data);
+            }
+        }
+        return  bufferDes;
+    }
+
+    private IntBuffer convertToIntBuffer(ByteBuffer bufferDes){
+        IntBuffer bufferInt =bufferDes.asIntBuffer();
+        int[] arr=new int[bufferInt.remaining()];
+        bufferInt.get(arr);
+        return bufferInt;
+    }
+
 
     private void setUpMediaProjection() {
         mMediaProjection = mMediaProjectionManager.getMediaProjection(mResultCode, mResultData);
