@@ -376,6 +376,7 @@ public class SrsEncoder {
         if (videoFrameCacheNumber != null && videoFrameCacheNumber.get() < VGOP) {
             long pts = System.nanoTime() / 1000 - mPresentTimeUs;
             if (useSoftEncoder) {
+
                 swRgbaFrame(data, width, height, pts);
             } else {
                 byte[] processedData = hwRgbaFrame(data, width, height);
@@ -483,9 +484,11 @@ public class SrsEncoder {
     private byte[] hwRgbaFrame(byte[] data, int width, int height) {
         switch (mVideoColorFormat) {
             case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar:
-                return RGBAToI420(data, width, height, true, 180);
+//                return RGBAToI420(data, width, height, true, 180);
+                return RGBAToI420(data, width, height, false, 180);
             case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar:
-                return RGBAToNV12(data, width, height, true, 180);
+//                return RGBAToNV12(data, width, height, true, 180);
+                return RGBAToNV12(data, width, height, false, 180);
             default:
                 throw new IllegalStateException("Unsupported color format!");
         }
@@ -494,9 +497,11 @@ public class SrsEncoder {
     private byte[] hwYUVNV21FrameScaled(byte[] data, int width, int height, Rect boundingBox) {
         switch (mVideoColorFormat) {
             case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar:
-                return NV21ToI420Scaled(data, width, height, true, 180, boundingBox.left, boundingBox.top, boundingBox.width(), boundingBox.height());
+                return NV21ToI420Scaled(data, width, height, false, 0, boundingBox.left, boundingBox.top, boundingBox.width(), boundingBox.height());
+//                return NV21ToI420Scaled(data, width, height, true, 180, boundingBox.left, boundingBox.top, boundingBox.width(), boundingBox.height());
             case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar:
-                return NV21ToNV12Scaled(data, width, height, true, 180, boundingBox.left, boundingBox.top, boundingBox.width(), boundingBox.height());
+                return NV21ToNV12Scaled(data, width, height, false, 0, boundingBox.left, boundingBox.top, boundingBox.width(), boundingBox.height());
+//                return NV21ToNV12Scaled(data, width, height, true, 180, boundingBox.left, boundingBox.top, boundingBox.width(), boundingBox.height());
             default:
                 throw new IllegalStateException("Unsupported color format!");
         }
@@ -525,7 +530,8 @@ public class SrsEncoder {
     }
 
     private void swRgbaFrame(byte[] data, int width, int height, long pts) {
-        RGBASoftEncode(data, width, height, true, 180, pts);
+        RGBASoftEncode(data, width, height, false, 180, pts);
+//         RGBASoftEncode(data, width, height, true, 0, pts);
     }
 
     public AudioRecord chooseAudioRecord() {

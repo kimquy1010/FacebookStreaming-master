@@ -1,5 +1,6 @@
 package net.ossrs.yasea;
 
+import android.graphics.Bitmap;
 import android.media.AudioRecord;
 import android.media.audiofx.AcousticEchoCanceler;
 import android.media.audiofx.AutomaticGainControl;
@@ -9,6 +10,8 @@ import com.github.faucamp.simplertmp.RtmpHandler;
 import com.seu.magicfilter.utils.MagicFilterType;
 
 import java.io.File;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 
 /**
  * Created by Leo Ma on 2016/7/25.
@@ -32,6 +35,7 @@ public class SrsPublisher {
     private SrsFlvMuxer mFlvMuxer;
     private SrsMp4Muxer mMp4Muxer;
     private SrsEncoder mEncoder;
+    private ByteBuffer bufferDes;
 
     public SrsPublisher(SurfaceView view) {
         mCameraView = view;
@@ -318,5 +322,31 @@ public class SrsPublisher {
         if (mMp4Muxer != null) {
             mEncoder.setMp4Muxer(mMp4Muxer);
         }
+    }
+
+    public byte[] getByteArrayFromBitmap(Bitmap bitmap, int Width, int Height){
+        IntBuffer bufferInt=IntBuffer.allocate(Width*Height);
+        bitmap.copyPixelsToBuffer(bufferInt);
+//        for (int i=0; i<Height;i++){
+//            for (int j=0;j<Width;j++){
+//                bufferInt.put(bitmap.getPixel(i,j));
+//            }
+//        }
+        bufferInt.rewind();
+        int[] arr = bufferInt.array();
+        //ByteBuffer bufferDes;
+        bufferDes.asIntBuffer().put(bufferInt.array());
+//        int[] arr=new int[bufferInt.remaining()];
+//        bufferInt.get(arr);
+        return bufferDes.array();
+    }
+    public int[] getIntArrayFromBitmap(Bitmap bitmap, int Width, int Height){
+        IntBuffer bufferInt=IntBuffer.allocate(Width*Height);
+        bitmap.copyPixelsToBuffer(bufferInt);
+        bufferInt.rewind();
+//        int[] arr = bufferInt.array();
+        int[] arr=new int[bufferInt.remaining()];
+        bufferInt.get(arr);
+        return arr;
     }
 }

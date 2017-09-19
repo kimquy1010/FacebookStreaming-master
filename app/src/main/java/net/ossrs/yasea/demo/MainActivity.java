@@ -19,8 +19,10 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
+import android.support.v4.content.res.TypedArrayUtils;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -63,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
     private Button btnSwitchEncoder;
 
     private SharedPreferences sp;
-    private String rtmpUrl = "rtmp://live-api-a.facebook.com:80/rtmp/1625437000810473?ds=1&s_l=1&a=ATiQP13Clag5uDgs";
+    private String rtmpUrl = "rtmp://live-api-a.facebook.com:80/rtmp/1628896230464550?ds=1&s_l=1&a=ATg6MQoxd1hQ_bsr";
     private String recPath = Environment.getExternalStorageDirectory().getPath() + "/test.mp4";
 
     private SrsPublisher mPublisher;
@@ -78,7 +80,9 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
 
     private int mScreenDensity;
     private DisplayMetrics metrics;
-
+    private int mScreenWidth;
+    private int mScreenHeight;
+    byte[] arr5;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -99,7 +103,9 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
 
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(metrics);
-        mScreenDensity = metrics.densityDpi;
+        mScreenDensity = metrics.densityDpi; //1/160inch
+        mScreenWidth=metrics.widthPixels;
+        mScreenHeight=metrics.heightPixels;
         mMediaProjectionManager = (MediaProjectionManager)
                 getSystemService(Context.MEDIA_PROJECTION_SERVICE);
 
@@ -108,7 +114,7 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         btnRecord = (Button) findViewById(R.id.record);
         btnSwitchEncoder = (Button) findViewById(R.id.swEnc);
         mImageView=(ImageView) findViewById(R.id.imageView2);
-
+        byte[] arr5=new byte[mScreenWidth * pixelStride * mScreenHeight];
         mSurfaceView = (SurfaceView) findViewById(R.id.glsurfaceview_camera);
 
         mPublisher = new SrsPublisher(mSurfaceView);
@@ -201,7 +207,10 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
     private MediaProjectionManager mMediaProjectionManager;
     private VirtualDisplay mVirtualDisplay;
     private ImageReader mImageReader;
-    int mWidth, mHeight;
+    private int mWidth, mHeight;
+    private int pixelStride;
+    private int rowStride;
+    private int rowPadding;
 
     private void startScreenCapture() {
         if (mSurface == null) {
@@ -249,37 +258,110 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
     private void setUpVirtualDisplay() {
         Log.e(TAG, "Setting up a VirtualDisplay: " +
                 mSurfaceView.getWidth() + "x" + mSurfaceView.getHeight() +
-                " (" + mScreenDensity + ")");
+                " (" + mScreenDensity + ")"+mScreenHeight+" " +mScreenWidth);
 
         Display display = getWindowManager().getDefaultDisplay();
         Point size = new Point();
         display.getSize(size);
         mWidth = mSurfaceView.getWidth();
         mHeight = mSurfaceView.getHeight();
-        mImageReader = ImageReader.newInstance(mWidth, mHeight, PixelFormat.RGBA_8888, 8);
+
+//        mImageReader = ImageReader.newInstance(mWidth, mHeight, PixelFormat.RGBA_8888, 8);
+        mImageReader = ImageReader.newInstance(mScreenWidth, mScreenHeight, PixelFormat.RGBA_8888, 8);
 
         mVirtualDisplay = mMediaProjection.createVirtualDisplay("ScreenCapture",
-                mSurfaceView.getWidth(), mSurfaceView.getHeight(), mScreenDensity,
+                mScreenWidth,mScreenHeight,mScreenDensity,
+//                mSurfaceView.getWidth(), mSurfaceView.getHeight(), mScreenDensity,
+                //640,360,mScreenDensity,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                 mImageReader.getSurface(), null, null);
 
         mImageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener(){
             @Override
             public void onImageAvailable(ImageReader imageReader) {
+                Log.d(TAG,"Have a frame");
                 Image image = null;
                 Bitmap bitmap=null;
-
                 ByteArrayOutputStream jpegByteOutStream = new ByteArrayOutputStream();
                 try {
-                    image = mImageReader.acquireLatestImage();
+
                     // Grab the image that the reader prepared us with
+                    image = mImageReader.acquireLatestImage();
                     if (image != null) {
-//                        bitmap =getScreenshot(image);
-//                        byte[] arr=getBufferFromImage_Rgba(image);
+
+
+                        //pp1
+                        byte[] arr=getBufferFromImage_Rgba(image);
+//                        new AsyncTask<>()
+//                        arr=RGBAtoRGBA_1(arr);
+                        mPublisher.onGetRgbaFrame(arr, mScreenWidth, mScreenHeight);
 //                        mPublisher.onGetRgbaFrame(arr, mWidth, mHeight);
 
-                        int[] arr= getArrayFromImage_Argb(image);
-                        mPublisher.onGetArgbFrame(arr,mWidth,mHeight);
+                        //pp2
+//                        int[] arr= getArrayFromImage_Argb(image);
+//                        arr=ARGBtoRGB(arr);
+//                        mPublisher.onGetArgbFrame(arr,mScreenWidth,mScreenHeight);
+
+
+//                        Image image = mImageReader.acquireLatestImage();
+//                        bitmap =getScreenshot(image);
+//                        mImageView.setImageBitmap(bitmap);
+
+                        //pp3
+//                        image = mImageReader.acquireLatestImage();
+//                        Bitmap screenshot = getScreenshot(image);
+//                        int[] intArray=mPublisher.getIntArrayFromBitmap(screenshot,mScreenWidth + rowPadding / pixelStride,mScreenHeight);
+//                        mPublisher.onGetArgbFrame(intArray,mScreenWidth + rowPadding / pixelStride,mScreenHeight);
+
+                        //pp4
+//                        byte[] byteArray=mPublisher.getByteArrayFromBitmap(screenshot,mWidth,mHeight);
+//                        mPublisher.onGetRgbaFrame(byteArray,mWidth,mHeight);
+//                        byte[] byteArray=mPublisher.getByteArrayFromBitmap(screenshot,mScreenWidth,mScreenHeight);
+//                        mPublisher.onGetRgbaFrame(byteArray,mScreenWidth,mScreenHeight);
+
+                        //pp5
+
+//                        MyData obj = new MyData(image,mScreenWidth,mScreenHeight);
+//
+//                        new RemakeBuffer(image, mScreenHeight,mScreenWidth).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+
+//                        new  AsyncTask<Object,Void,byte[]>() {
+//
+//                            @Override
+//                            protected byte[] doInBackground(Object... params) {
+//                                Image image = (Image) params[0];
+//                                int mScreenWidth = (int) params[1];
+//                                int mScreenHeight = (int) params[2];
+//
+//                                Image.Plane[] planes = image.getPlanes();
+//                                ByteBuffer buffer = planes[0].getBuffer();
+//                                int pixelStride = planes[0].getPixelStride();
+//                                int rowStride = planes[0].getRowStride();
+//                                int rowPadding = rowStride - pixelStride * mScreenWidth;
+//                                int capacity = mScreenWidth * mScreenHeight * pixelStride;
+//                                ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
+//                                byte[] data = new byte[pixelStride];
+//                                for (int i = 0; i < mScreenHeight; i++) {
+//                                    buffer.position(i * rowStride);
+//                                    for (int j = 0; j < mScreenWidth; j++) {
+//                                        buffer.position(j * pixelStride + i * rowStride);
+//                                        buffer.get(data, 0, pixelStride);
+//                                        byte a = data[0];
+//                                        data[0] = data[2];
+//                                        data[2] = a;
+//                                        bufferDes.put(data);
+//                                    }
+//                                }
+//                                return bufferDes.array();
+//                            }
+//
+//                            @Override
+//                            protected void onPostExecute(byte[] bytes) {
+//                                arr5=bytes;
+//                                super.onPostExecute(bytes);
+//                            }
+//                        }.execute(image,mScreenWidth,mScreenHeight);
+//                        mPublisher.onGetRgbaFrame(arr5, mScreenWidth, mScreenHeight);
 
                         //Log.v(TAG, "Sent a single image!");
                     }
@@ -308,18 +390,17 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
     }
 
     private Bitmap getScreenshot(Image image) {
+        Log.d(TAG,"Get Screen Shoot");
         Image.Plane[] planes = image.getPlanes();
         ByteBuffer buffer = planes[0].getBuffer();
-        int pixelStride = planes[0].getPixelStride();
-        int rowStride = planes[0].getRowStride();
-        int rowPadding = rowStride - pixelStride * mWidth;
-
-        Bitmap bitmap = Bitmap.createBitmap(mWidth + rowPadding / pixelStride, mHeight, Bitmap.Config.ARGB_8888);
+        pixelStride = planes[0].getPixelStride();
+        rowStride = planes[0].getRowStride();
+        rowPadding = rowStride - pixelStride * mScreenWidth;
+        Bitmap bitmap = Bitmap.createBitmap(mScreenWidth + rowPadding / pixelStride, mScreenHeight, Bitmap.Config.ARGB_8888);
         bitmap.copyPixelsFromBuffer(buffer);
-        image.close();
-
         return bitmap;
     }
+
 
     private ByteBuffer getBufferFromBitmap(Bitmap bitmap){
         int bytes=bitmap.getByteCount();
@@ -333,34 +414,48 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         Image.Plane[] planes = image.getPlanes();
         ByteBuffer buffer = planes[0].getBuffer();
         buffer.rewind();
-        int pixelStride = planes[0].getPixelStride();
-        int rowStride = planes[0].getRowStride();
-        int rowPadding = rowStride - pixelStride * mWidth;
-        int capacity = mWidth * pixelStride * mHeight;
-        byte[][] data = new byte[mHeight][mWidth * pixelStride];
+        pixelStride = planes[0].getPixelStride();
+        rowStride = planes[0].getRowStride();
+//        int rowPadding = rowStride - pixelStride * mWidth;
+//        int capacity = mWidth * pixelStride * mHeight;
+//        byte[][] data = new byte[mHeight][mWidth * pixelStride];
+//        for (int i = 0; i < mHeight; i++) {
+//            buffer.position(i * rowStride);
+//            buffer.get(data[i], 0, mScreenWidth * pixelStride);
+//            bufferDes.put(data[i]);
+//        }
+        int rowPadding = rowStride - pixelStride * mScreenWidth;
+        int capacity = mScreenWidth * pixelStride * mScreenHeight;
+        byte[][] data = new byte[mScreenHeight][mScreenWidth * pixelStride];
         ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
-        for (int i = 0; i < mHeight; i++) {
+//        bufferDes.position(0);
+        for (int i = 0; i < mScreenHeight; i++) {
             buffer.position(i * rowStride);
-            buffer.get(data[i], 0, mWidth * pixelStride);
+            buffer.get(data[i], 0, mScreenWidth * pixelStride);
+            bufferDes.put(data[i]);
         }
-        for (int j=0;j<mHeight;j++){
-            bufferDes.put(data[mHeight-j-1]);
-        }
+
+//        for (int j=0;j<mHeight;j++){
+//            bufferDes.put(data[mHeight-j-1]);
+//        }
+        bufferDes.rewind();
         return bufferDes.array();
     }
+
+
     private int[] getArrayFromImage_Argb(Image image){
         Image.Plane[] planes = image.getPlanes();
         ByteBuffer buffer = planes[0].getBuffer();
         buffer.rewind();
-        int pixelStride = planes[0].getPixelStride();
-        int rowStride = planes[0].getRowStride();
-        int rowPadding = rowStride - pixelStride * mWidth;
-        int capacity = mWidth * pixelStride * mHeight;
-        byte[] data = new byte[mWidth * pixelStride];
+        pixelStride = planes[0].getPixelStride();
+        rowStride = planes[0].getRowStride();
+        rowPadding = rowStride - pixelStride * mScreenWidth;
+        int capacity = mScreenWidth * pixelStride * mScreenHeight;
+        byte[] data = new byte[mScreenWidth * pixelStride];
         ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
-        for (int i = 0; i < mHeight; i++) {
+        for (int i = 0; i < mScreenHeight; i++) {
             buffer.position(i * rowStride);
-            buffer.get(data, 0, mWidth * pixelStride);
+            buffer.get(data, 0, mScreenWidth * pixelStride);
             bufferDes.put(data);
         }
 //        for (int j=0;j<mHeight;j++){
@@ -373,28 +468,110 @@ public class MainActivity extends AppCompatActivity implements RtmpHandler.RtmpL
         return arr;
     }
 
-    private ByteBuffer getBufferFromImage_2(Image image){
+    private int[] getBufferFromImage_2(Image image){
         Image.Plane[] planes = image.getPlanes();
         ByteBuffer buffer = planes[0].getBuffer();
 
         int pixelStride = planes[0].getPixelStride();
         int rowStride = planes[0].getRowStride();
-        int rowPadding = rowStride - pixelStride * mWidth;
-        int capacity = mWidth  * mHeight * pixelStride;
+//        int rowPadding = rowStride - pixelStride * mWidth;
+//        int capacity = mWidth  * mHeight * pixelStride;
+//        ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
+
+        int rowPadding = rowStride - pixelStride * mScreenWidth;
+        int capacity = mScreenWidth  * mScreenHeight * pixelStride;
         ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
         byte[] data=new byte[pixelStride];
-        for (int i = 0; i <mHeight; i++) {
+        for (int i = 0; i <mScreenHeight; i++) {
             buffer.position(i * rowStride);
-            for (int j = 0; j < mWidth; j++) {
+            for (int j = 0; j < mScreenWidth; j++) {
                 buffer.position(j * pixelStride);
                 buffer.get(data, 0, pixelStride);
                 byte a = data[0];
-                data[0] = data[3];
-                data[3] = a;
+                data[0] = data[2];
+                data[2] = a;
                 bufferDes.put(data);
             }
         }
-        return  bufferDes;
+        return  bufferDes.asIntBuffer().array();
+    }
+
+     public class RemakeBuffer extends AsyncTask<Void,Void,byte[]> {
+         Image mImage ;
+         int mScreenWidth ;
+         int mScreenHeight ;
+         public RemakeBuffer(Image image, int mScreenHeight, int mScreenWidth){
+             mImage = image;
+             this.mScreenHeight = mScreenHeight;
+             this.mScreenWidth = mScreenWidth;
+         }
+
+        @Override
+        protected byte[] doInBackground(Void... params) {
+
+            Image.Plane[] planes = mImage.getPlanes();
+            ByteBuffer buffer = planes[0].getBuffer();
+            int pixelStride = planes[0].getPixelStride();
+            int rowStride = planes[0].getRowStride();
+            int rowPadding = rowStride - pixelStride * mScreenWidth;
+            int capacity = mScreenWidth * mScreenHeight * pixelStride;
+            ByteBuffer bufferDes = ByteBuffer.allocate(capacity);
+            byte[] data = new byte[pixelStride];
+            for (int i = 0; i < mScreenHeight; i++) {
+                buffer.position(i * rowStride);
+                for (int j = 0; j < mScreenWidth; j++) {
+                    buffer.position(j * pixelStride + i * rowStride);
+                    buffer.get(data, 0, pixelStride);
+                    byte a = data[0];
+                    data[0] = data[2];
+                    data[2] = a;
+                    bufferDes.put(data);
+                }
+            }
+            return bufferDes.array();
+        }
+
+        @Override
+        protected void onPostExecute(byte[] bytes) {
+            super.onPostExecute(bytes);
+        }
+    }
+
+
+    public class MyData {
+        private Image image;
+        private int mScreenWidth;
+        private int mScreenHeight;
+
+        public MyData(Image image, int mScreenWidth, int mScreenHeight) {
+            this.image = image;
+            this.mScreenHeight = mScreenHeight;
+            this.mScreenWidth=mScreenWidth;
+        }
+
+        // getter/setter methods for your fields
+    }
+
+    public byte[] RGBAtoRGB(byte[] arr_buff){
+        for (int i=3; i<arr_buff.length;i+=4){
+            arr_buff[i]=0;
+        }
+        return arr_buff;
+    }
+
+    public byte[] RGBAtoRGBA_1(byte[] arr_buff){
+        byte[] arr_buff_new =new byte[mScreenWidth * pixelStride * mScreenHeight];
+        arr_buff_new[0]=5;
+        for (int i=1; i<arr_buff.length;i+=1){
+            arr_buff_new[i]=arr_buff[i-1];
+        }
+        return arr_buff_new;
+    }
+    public int[] ARGBtoRGB(int[] arr_buff){
+        for (int i=3; i<arr_buff.length;i+=4){
+            arr_buff[i]=0;
+        }
+        return arr_buff;
     }
 
     private void setUpMediaProjection() {

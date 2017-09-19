@@ -57,5 +57,12 @@
         android:textSize="14dp"
         android:id="@+id/url"
         android:textColor="@color/accent_material_light" />
+    <ImageView
+        android:id="@+id/imageView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@mipmap/ic_launcher"
+        tools:layout_editor_absoluteX="174dp"
+        tools:layout_editor_absoluteY="183dp" />
 
 </RelativeLayout>

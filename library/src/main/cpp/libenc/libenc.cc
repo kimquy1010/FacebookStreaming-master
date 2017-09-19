@@ -224,7 +224,23 @@ libenc_setEncoderResolution(JNIEnv *env, jobject thiz, jint out_width, jint out_
 // For COLOR_FormatYUV420Planar
 static jbyteArray libenc_RGBAToI420(JNIEnv *env, jobject thiz, jbyteArray frame, jint src_width,
                                     jint src_height, jboolean need_flip, jint rotate_degree) {
+
+
     jbyte *rgba_frame = env->GetByteArrayElements(frame, NULL);
+    int len = env->GetArrayLength(frame);
+    printf("Do dai cua buffer la: %d",len);
+    for (int i = 0; i <len/2 ; i++) {
+        uint8_t a=rgba_frame[i];
+        rgba_frame[i]=rgba_frame[len-i-1];
+        rgba_frame[len-i-1]=a;
+    }
+
+    if (!convert_to_i420((uint8_t *) rgba_frame, src_width, src_height, need_flip, rotate_degree,
+                         FOURCC_RGBA)) {
+        return NULL;
+    }
+
+
 
     if (!convert_to_i420((uint8_t *) rgba_frame, src_width, src_height, need_flip, rotate_degree,
                          FOURCC_RGBA)) {
@@ -243,6 +259,7 @@ static jbyteArray
 libenc_NV21ToNV12Scaled(JNIEnv *env, jobject thiz, jbyteArray frame, jint src_width,
                         jint src_height, jboolean need_flip, jint rotate_degree,
                         jint crop_x, jint crop_y, jint crop_width, jint crop_height) {
+
     jbyte *rgba_frame = env->GetByteArrayElements(frame, NULL);
 
     if (!convert_to_i420_with_crop_scale((uint8_t *) rgba_frame, src_width, src_height,
@@ -333,6 +350,13 @@ libenc_ARGBToI420Scaled(JNIEnv *env, jobject thiz, jintArray frame, jint src_wid
 static jbyteArray libenc_RGBAToNV12(JNIEnv *env, jobject thiz, jbyteArray frame, jint src_width,
                                     jint src_height, jboolean need_flip, jint rotate_degree) {
     jbyte *rgba_frame = env->GetByteArrayElements(frame, NULL);
+    int len = env->GetArrayLength(frame);
+    printf("Do dai cua buffer la: %d",len);
+    for (int i = 0; i <len/2 ; i++) {
+        uint8_t a=rgba_frame[i];
+        rgba_frame[i]=rgba_frame[len-i-1];
+        rgba_frame[len-i-1]=a;
+    }
 
     if (!convert_to_i420((uint8_t *) rgba_frame, src_width, src_height, need_flip, rotate_degree,
                          FOURCC_RGBA)) {
@@ -473,6 +497,18 @@ static jint libenc_RGBASoftEncode(JNIEnv *env, jobject thiz, jbyteArray frame, j
                                   jint src_height, jboolean need_flip, jint rotate_degree,
                                   jlong pts) {
     jbyte *rgba_frame = env->GetByteArrayElements(frame, NULL);
+    int len = env->GetArrayLength(frame);
+    printf("Do dai cua buffer la: %d",len);
+//    for (jbyte i = 1; i <len/2 ; i++) {
+//        jbyte a = rgba_frame[i];
+//        rgba_frame[i]=rgba_frame[len-i-1];
+//        rgba_frame[len-i-1]=a;
+//    }
+    for (int i = 0; i <len/2 ; i++) {
+        uint8_t a=rgba_frame[i];
+        rgba_frame[i]=rgba_frame[len-i-1];
+        rgba_frame[len-i-1]=a;
+    }
 
     if (!convert_to_i420((uint8_t *) rgba_frame, src_width, src_height, need_flip, rotate_degree,
                          FOURCC_RGBA)) {
